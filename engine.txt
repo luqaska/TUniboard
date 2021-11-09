@@ -443,7 +443,7 @@ if(file_exists("db/boards/" . $_GET["board"] . ".json")){
 
 	?>
 <footer>
-&copy;2021 Beikvar - <a href="https://github.com/beikvar/titha">Code</a ><br />
+&copy;2021 Beikvar - <a href="https://github.com/beikvar/TithaEngine">Code</a ><br />
 Using TithaEngine - v. β1
 <!--<br><br>Este sitio web sigue en desarrollo, solo los desarrolladores tienen derecho a públicar contenido aquí.-->
 </footer>
