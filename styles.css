@@ -1,0 +1,47 @@
+@import url("https://fonts.beikvar.repl.co/Lato/latofonts.css");
+
+/* General */
+body{
+  font-family:"LatoWeb";
+  background:linear-gradient(rgb(255, 239, 151), #edb1ff) no-repeat fixed center;
+  margin:1% 5%;
+  font-size:86%;
+}
+img{image-rendering:pixelated;}
+
+/* ?board= */
+#bhome{text-align:center;}
+#banner img{
+  border:1px black solid;
+  width:20%;
+  height:auto;
+}
+
+/* Boards */
+#boards{margin:0 20%;}
+#boards table{width:60%;}
+#boards li{font-size:120%;}
+/*#boards tr,#boards td{width:1%;}*/
+
+/* Posts */
+#desc{font-size:50%;font-style:italic;}
+.item{
+  font-weight:bold;
+  margin:0 0 14px 0;
+  padding:3px;
+  background:lightgray;
+  border:3px outset;
+}
+.id{width:5%;}
+.content{width:85%;text-align:justify;}
+.subject,.gt{color:red;}
+.name{color:green;}
+.date{font-weight:normal;color:green;font-size:90%;}
+.msg{font-weight:normal;}
+.subp{float:right;background:lightgray;border:1px outset;}
+.pt{color:pink;}
+
+img.bdg{width:12px;height:auto;}
+
+/* Footer */
+footer{margin:20px 0 0 0;text-align:center;}
