@@ -1,8 +1,8 @@
-<?php include_once("conf.php");
+<?php include_once("conf.php"); require_once('Chandown.php'); session_start();
 
 
 /*
-* TithaEngine vBETA-1
+* TithaEngine vBETA2
 * https://github.com/beikvar/TithaEngine
 *
 *   Copyright 2021 Beikvar
@@ -18,6 +18,17 @@ you may not use this file except in compliance with the License.
 */
 
 
+
+if(isset($_SESSION["user"]) && isset($_SESSION["pass"]) && isset($_SESSION["yep"])){
+  if(file_exists("db/users/" . $_SESSION["user"] . ".json")){
+    $UserInfo = json_decode(file_get_contents("db/users/" . $_SESSION["user"] . ".json"));
+    if(password_verify($_SESSION["pass"], $UserInfo->{"pass"})){
+      if(password_verify($_SESSION["user"].$_SESSION["pass"].$UserInfo->{"pass"}, $_SESSION["yep"])){
+        $verified=true; $acctype=$UserInfo->{"type"};
+      }else{die("<body style='background:black;color:black'>ur tring 2 hack?</body>");}
+    }else{die("<body style='background:black;color:black'>ur tring 2 hack?</body>");}
+  }else{die("<body style='background:black;color:black'>ur tring 2 hack?</body>");}
+}
 
 // Tools
 
@@ -63,9 +74,6 @@ function genKey($n) {
 }
 
 /* Graphics stuff */
-function error() {
-  echo '<div><img style="text-align:center" src="img/404.png" width="30%"><br><p>Not found</p></div>';
-}
 function banner() {
 	$MessageArray = file_get_contents("db/banners/index.txt");
   $CurrMsg = explode("\n", $MessageArray);
@@ -79,6 +87,10 @@ function banner() {
 }
 function goHome() {
   return '<a href="?" style="color:black;text-decoration:none"><= <img style="text-align:center" src="img/logo.png" height="10px"></a>';
+}
+function notFound() {
+  echo goHome() . "\n";
+  echo '<div style="text-align:center"><img style="text-align:center" src="img/404.png" width="30%"><br><p>Not found</p></div>';
 }
 
 /* Show all board's codes */
@@ -99,6 +111,25 @@ function boardList(){
   }
   $vaa .= "]<span style=\"margin:0 0 0 10px\">[<a href=\"?reglas\">ToS</a>]</span>";
   return $vaa;
+}
+
+/* User */
+function showUser(){
+  if(isset($_SESSION["user"])){
+    $info = json_decode(file_get_contents("db/users/$_SESSION[user].json"));
+		if($info->{"type"} != 0){
+			$ubdg = ' <img class="bdg" src="img/';
+      if($info->{"type"} == 1){
+        $aus = "Admin";
+      }elseif($info->{"type"} == 2){
+        $aus = "Mod";
+      }elseif($info->{"type"} == 3){
+        $aus = "Verificado";
+      }
+      $ubdg .= "$aus.png\" title=\"$aus\" alt=\"$aus\">";
+		}else{$ubdg = "";}
+		return $_SESSION["user"] . ' ' . $ubdg . '] [<a href="?logout">Log out</a>';
+  }else{return "<a href='?auth'>Log in</a>";}
 }
 
 
@@ -169,7 +200,25 @@ function boardList(){
 
   if(isset($_GET["post"])){
     // Post page
-		if(isset($_GET["t"]) && file_exists("db/posts/$_GET[t].json")){$t=true;}else{$t=false;}
+		if(isset($_GET["t"]) && file_exists("db/posts/$_GET[t].json")){
+      $testi=json_decode(file_get_contents("db/posts/$_GET[t].json"));
+      if($testi->{"res"}==""){
+        $t=true;$b=false;
+      }else{
+			  $t=false;$b=false;
+      }
+		}elseif(isset($_GET["board"]) && file_exists("db/boards/$_GET[board].json")){
+      $testi=json_decode(file_get_contents("db/boards/$_GET[board].json"));
+      if($testi->{"blocked"}==false){
+        $t=false;$b=true;
+      }else{
+        if(isset($verified)){
+			    $t=false;$b=true;
+        }else{
+          $t=false;$b=false;
+        }
+      }
+		}else{$t=false;$b=false;}
 		if(isset($_POST["submit"])) {
 
       // Create ID
@@ -182,28 +231,33 @@ function boardList(){
 			// HTMLfy and put the "anon" flair to some users
 			$Subject = htmlentities($Subject);
       if($Name=="") {
-        $Name="anon";
+        $Name = '"' . "anon" . '"';
       } else {
-        $Name = htmlentities($Name);
+        $Name = '"' . htmlentities($Name) . '"';
       }
       $Message = htmlentities($Message);
 
-      if (strpos($Message, "\n") !== false) {
-        $Message = str_replace("\n", "<br>", $Message);
-      }
+      $Message = preg_replace("/\n/", "", $Message);
+      $Message = preg_replace("/\r/", "<br>", $Message);
 
 			// Create a variable that serves a single line of data for us to save to the file
 			if($t){
-				$res='"' . $_GET["t"] . '"';
+				$res = '"' . $_GET["t"] . '"';
 				$b_i = json_decode(file_get_contents("db/posts/" . $_GET["t"] . ".json"));
 				$board = $b_i->{"board"};
       }else{
-				$res='false';
-				$board = $_POST["board"];
+				$res = 'false';
+				if($b){
+					$board = $_GET["board"];
+				}else{
+					$board = $_POST["board"];
+				}
+        echo $board;
 			}
+      if(isset($verified)){$utype=$acctype;}else{$utype=0;}
       $key = password_hash($_POST["key"], PASSWORD_DEFAULT);
 			$date = date(DATE_ATOM);
-			$MessageRecord = "{\"board\":\"$board\",\"res\":$res,\"subject\":\"$Subject\",\"date\":\"$date\",\"name\":\"$Name\",\"utype\":0,\"msg\":\"$Message\",\"key\":\"$key\"}";
+			$MessageRecord = "{\"board\":\"".$board."\",\"res\":$res,\"subject\":\"$Subject\",\"date\":\"$date\",\"name\":$Name,\"utype\":$utype,\"msg\":\"$Message\",\"key\":\"$key\"}";
 
 			// Create up the file index.txt and save the file data into a variable
 			$DatabaseFile = fopen("db/posts/index.txt", "ab");
@@ -228,30 +282,40 @@ function boardList(){
 				fclose($MessageFile);
 			}
 
-			if($t){header("location: ?t=" . $_GET["t"]);}else{header("location: ?t=" . $id);}
+			if($t){header("location: ?t=" . $_GET["t"] . "#" . $id);}else{header("location: ?t=" . $id);}
 		}
 	?>
 
 	<h1> Post New Message </h1>
 	<hr/>
-	<form action="?post<?php if($t){echo '&t=' . $_GET['t'];} ?>" method="POST">
+	<form action="?post<?php if($t){echo '&t=' . $_GET['t'];}elseif($b){echo '&board=' . $_GET['board'];} ?>" method="POST">
 <?php
 if(!$t){
-echo '		<label style="font-weight:bold" for="board">Board: </label>' . "\n" . '		<select name="board">' . "\n";
+echo '		<label style="font-weight:bold" for="board">Board: </label>' . "\n";
+if(!$b){
+echo '		<select name="board">' . "\n";
 // Open index of categories
 $Boards = file_get_contents("db/boards/index.txt");
 	$Boards_List = explode("\n", $Boards);
 	$Boards_Count = count($Boards_List);
 	for($i = 0; $i < $Boards_Count; ++$i) {
-	echo '			<option value="' . $Boards_List[$i] . '">/' . $Boards_List[$i] . '/</option>' . $Boards_List[$i] . "</option>\n";
-}
+    $testi=json_decode(file_get_contents("db/boards/$Boards_List[$i].json"));
+    if($testi->{"blocked"}==false){
+        echo '			<option value="' . $Boards_List[$i] . '">/' . $Boards_List[$i] . '/</option>' . $Boards_List[$i] . "</option>\n";
+    }else{
+      if(isset($verified)){
+			  echo '			<option value="' . $Boards_List[$i] . '">/' . $Boards_List[$i] . '/</option>' . $Boards_List[$i] . "</option>\n";
+      }
+    }
+  }
 echo '		</select> <br />';
+}else{echo "/" . $_GET["board"] . "/ <br /> \n";}
 } ?>
 		<label style="font-weight:bold" for="subject"> Subject: </label>
 		<input type="text" name="subject"/> <br/>
 		<label style="font-weight:bold" for="name"> Name: </label>
 		<input type="text" name="name" /> <br/>
-		<textarea name="message" rows="6" cols="50"></textarea><br/>
+		<textarea id="message" name="message" rows="30" cols="60"><?php if($t){echo ">>$_GET[t]#\n\n";} ?></textarea><br/>
 		<label style="font-weight:bold" for="key">Key: </label><input type="text" name="key" value="<?= genKey(8) ?>" /> <br/>
 		Please, keep it in a safe space, it is obligatory to delete a post <br /> <br />
 		<input type="submit" name="submit" value="Post Message" />
@@ -265,15 +329,37 @@ echo '		</select> <br />';
 
 
   } elseif(isset($_GET["del"])){
+    function del($id){
+      $CurrMsg = explode("\n", file_get_contents("db/posts/index.txt"));
+		  $count = count($CurrMsg);
+      for($i = 0; $i < $count; ++$i) {
+        // Open content (if it exists)
+        if(file_exists("db/posts/" . $CurrMsg[$i] . ".json")){
+          $Content = json_decode(file_get_contents("db/posts/" . $CurrMsg[$i] . ".json"));
+      
+          if(($CurrMsg[$i]== $id) || (isset($Content->{"res"}) && $Content->{"res"} == $id)){
+            unlink("db/posts/" . $CurrMsg[$i] . ".json");
+          }
+		    }
+      }
+    }
     if(isset($_GET["p"]) && file_exists("db/posts/" . $_GET["p"] . ".json")){
       if(isset($_POST["key"])){
         $Content = json_decode(file_get_contents("db/posts/" . $_GET["p"] . ".json"));
         if(password_verify($_POST["key"], $Content->{"key"})) {
-          unlink("db/posts/" . $_GET["p"] . ".json");
+          del($_GET["p"]);
           echo "<h1>Post eliminado</h1>";
+          $Content = json_decode(file_get_contents("db/posts/" . $_GET["p"] . ".json"));
           header("location: ?board=" . $Content->{"board"});
         }else{
           echo "<h1>Invalid key</h1>";
+        }
+      }elseif(isset($verified)){
+        if($acctype == (1 || 2)){
+          del($_GET["p"]);
+          echo "<h1>Post eliminado</h1>";
+          $Content = json_decode(file_get_contents("db/posts/" . $_GET["p"] . ".json"));
+          header("location: ?board=" . $Content->{"board"});
         }
       }else{
         echo "<div style='text-align:center'><h2>Poné tu llave para eliminar tu post</h2><form action='?del&p=$_GET[p]' method='POST'><input type='password' name='key'><input type='submit'></form></div>";
@@ -304,8 +390,8 @@ if(!file_exists("db/posts/index.txt") || (filesize("db/posts/index.txt") == 0)) 
 
 		// For every message that array has, we will loop to create a new <div> element and create the content
 		for($i = 0; $i < $count; ++$i) {
-      // Open content
-      $Content = json_decode(file_get_contents("db/posts/" . $CurrMsg[$i] . ".json"));
+      // Open content (if it exists)
+      if(file_exists("db/posts/" . $CurrMsg[$i] . ".json")){$Content = json_decode(file_get_contents("db/posts/" . $CurrMsg[$i] . ".json"));
       
       // Check if it is a post or a reply
       if(($CurrMsg[$i]== $_GET["t"]) || (isset($Content->{"res"}) && $Content->{"res"} == $_GET["t"])){
@@ -322,18 +408,18 @@ if(!file_exists("db/posts/index.txt") || (filesize("db/posts/index.txt") == 0)) 
           }
           $ubdg .= "$aus.png\" title=\"$aus\" alt=\"$aus\">";
 			  }else{$ubdg = "";}
-        if(!($fst)){echo "<a href=\"?del&p=$CurrMsg[$i]\">[X]</a>\n";}
+        if(!($fst)){echo "<a id=\"$CurrMsg[$i]\" href=\"?del&p=$CurrMsg[$i]\">[X]</a>\n";}
 			  echo "<span class=\"name\">" . $Content->{"name"} . $ubdg . "</span>\n";
         echo "<span class=\"subject\">" . $Content->{"subject"} . "</span>\n";
 			  echo "<span class=\"date\">" . $Content->{"date"} . "</span>\n";
-			  echo "<div class=\"msg\">" . $Content->{"msg"} . "</div>";
+			  echo "<div class=\"msg\">" . \Slimdown::render($Content->{"msg"}) . "</div>";
 			  if($fst){echo "<br><span class=\"subp\">[<a href=\"?del&p=$CurrMsg[$i]\">Delete</a>]</span>\n";}
 			  echo "</div> <hr />\n";
         $fst=false;
       }
-		}
+		}}
 		echo"</div>\n";
-		} else {error();}
+		} else {notFound();}
 	}
 
 
@@ -343,11 +429,11 @@ if(!file_exists("db/posts/index.txt") || (filesize("db/posts/index.txt") == 0)) 
     // Board page
 if(file_exists("db/boards/" . $_GET["board"] . ".json")){
 
-	echo '   <div style="display:block;margin:0 0 10px 0">' . goHome() . ' <span style="float:right">' . boardList() . '</span></div>';
+	echo '   <div style="display:block;margin:0 0 10px 0">' . goHome() . ' <span style="float:right"><span style="margin:0 0 0 10px">[<a href="?reglas">ToS</a>] [' . showUser() . ']</span></span></div>';
 
   $board_info = json_decode(file_get_contents("db/boards/" . $_GET["board"] . ".json"));
   $banner = banner();
-  echo '<div id="bhome">' . $banner . '<h1> /' . $_GET["board"] . '/ - ' . $board_info->{"title"} . '</h1><p>' . $board_info->{"description"} . '</p><h3>[<a href="?post">New thread</a>]</a></h3></div>';
+  echo '<div id="bhome">' . $banner . '<h1> /' . $_GET["board"] . '/ - ' . $board_info->{"title"} . '</h1><p>' . $board_info->{"description"} . '</p><h3>[<a href="?post&board=' . $_GET["board"] . '">New thread</a>]</a></h3></div>';
   if(!file_exists("db/posts/index.txt") || (filesize("db/posts/index.txt") == 0)) {
 		echo "The are no things posted.</p>\n";
 	} else {
@@ -359,10 +445,13 @@ if(file_exists("db/boards/" . $_GET["board"] . ".json")){
 		// Variable that simply counts the number of items in the $MessageArray
 		$count = count($CurrMsg);
     $s = $count-1;
+    $num = 0;
 
 		// For every message that array has, we will loop to create a new <div> element and create the content
 		for($i = 0; $i < $count; ++$i) {
-      // Open content
+      // Open content (if it exists)
+      if(file_exists("db/posts/" . $CurrMsg[$s] . ".json")){
+      
       $Content = json_decode(file_get_contents("db/posts/" . $CurrMsg[$s] . ".json"));
       
       // Check if it is a post or a reply
@@ -383,15 +472,58 @@ if(file_exists("db/boards/" . $_GET["board"] . ".json")){
 			  echo "<span class=\"name\">" . $Content->{"name"} . $ubdg . "</span>\n";
         echo "<span class=\"subject\">" . $Content->{"subject"} . "</span>\n";
 			  echo "<span class=\"date\">" . $Content->{"date"} . "</span>\n";
-			  echo "<div class=\"msg\">" . $Content->{"msg"} . "</div>";
-			  echo "<br><span class=\"subp\">[<a href=\"?board=$_GET[board]&t=$CurrMsg[$s]\">Respond</a>] [<a href=\"?del&p=$CurrMsg[$s]\">Delete</a>]</span>\n";
+			  echo "<div class=\"msg\">" . \Slimdown::render($Content->{"msg"}) . "</div>";
+			  echo "<br><span class=\"subp\">[<a href=\"?board=$_GET[board]&t=$CurrMsg[$s]\">View Thread</a>] [<a href=\"?del&p=$CurrMsg[$s]\">Delete</a>]</span>\n";
 			  echo "</div>\n";
+        $num++;
       }
-      $s--;
 		}
+    $s--;
+    }
+    if($num==0){echo '<h4 style="text-align:center">Este tablón est&aacute; vacío :-(</h4>';}
 		echo"</div>\n";
 	}
-}
+}else{notFound();}
+
+
+
+
+  } elseif(isset($_GET["auth"])){
+        // Post page
+		if(isset($_POST["submit"])) {
+
+      if(file_exists("db/users/".$_POST["user"].".json")){
+				$Content = json_decode(file_get_contents("db/users/".$_POST["user"].".json"));
+				if(password_verify($_POST["pass"], $Content->{"pass"})) {
+					$_SESSION["yep"] = password_hash($_POST["user"].$_POST["pass"].$Content->{"pass"}, PASSWORD_DEFAULT);
+          $_SESSION["user"] = $_POST["user"];
+          $_SESSION["pass"] = $_POST["pass"];
+					header("location: ?");
+				}else{
+					echo "<h1>Invalid</h1>";
+				}
+      }
+		}
+	?>
+
+	<h1> Verificate </h1>
+  <p>Como administrador, moderador, o invitado especial</p>
+	<hr/>
+	<form action="?auth" method="POST">
+		<label style="font-weight:bold" for="subject"> User: </label>
+		<input type="text" name="user"/> <br/>
+		<label style="font-weight:bold" for="name"> Password: </label>
+		<input type="password" name="pass" /> <br/>
+		<input type="submit" name="submit" value="Verificar" />
+	</form>
+	<hr/><?php
+
+
+
+
+  } elseif(isset($_GET["logout"])){
+    session_destroy();
+    header("location: ?");
 
 
 
@@ -444,7 +576,7 @@ if(file_exists("db/boards/" . $_GET["board"] . ".json")){
 	?>
 <footer>
 &copy;2021 Beikvar - <a href="https://github.com/beikvar/TithaEngine">Code</a ><br />
-Using TithaEngine - v. β1
+Using TithaEngine - v. β2
 <!--<br><br>Este sitio web sigue en desarrollo, solo los desarrolladores tienen derecho a públicar contenido aquí.-->
 </footer>
 </body>
