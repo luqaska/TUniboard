@@ -3,7 +3,7 @@
 - [Chandown](https://github.com/beikvar/TithaEngine/blob/main/Chandown.php)
   - Based on [this Slimdown fork](https://git.sr.ht/~hxii/picoblog/tree/master/item/Slimdown.php) and [this other script](https://gist.github.com/afsalrahim/bc8caf497a4b54c5d75d)
   - MIT License
-    ```MIT License
+    `MIT License
 
 Copyright (c) 2012-2021 Johnny Broadway <johnny@johnnybroadway.com>
 Copyright (c) 2020 hxii
@@ -25,4 +25,4 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.```
+SOFTWARE.`
