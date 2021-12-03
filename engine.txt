@@ -1,8 +1,10 @@
-<?php include_once("conf.php"); require_once('Chandown.php'); session_start();
+<?php require_once('Chandown.php'); session_start();
 
 
 $title = '';
-$description = '';
+$description = "";
+$banner = False;
+$style = '';
 
 
 /*
@@ -79,6 +81,7 @@ function genKey($n) {
 
 /* Graphics stuff */
 function banner() {
+  if($banner){
 	$MessageArray = file_get_contents("db/banners/index.txt");
   $CurrMsg = explode("\n", $MessageArray);
 
@@ -88,6 +91,7 @@ function banner() {
 	// Choose a random banner, open info file and show
   $Content = json_decode(file_get_contents("db/banners/" . $CurrMsg[rand(0, $count-1)] . ".json"));
   return '<div id="banner"><a href="' . $Content->{"link"} . '"><img src="' . $Content->{"url"} . '" alt=""></a></div>';
+  }else{return "";}
 }
 function goHome() {
   return '<a href="?" style="color:black;text-decoration:none"><= <img style="text-align:center" src="img/logo.png" height="10px"></a>';
@@ -131,7 +135,7 @@ function showUser(){
 <?= $style ?>
 </style>
 </head>
-<body>
+<body class="bbs">
   <!--[<a href="?action=Remove%20Duplicates">Remove Duplicates</a>]<p>[<a href="index.php?action=Delete%20First">Delete First Message]</p>
 
 	<p><a href="index.php?action=Delete%20Last"> Delete Last Message </a></p>-->
@@ -217,7 +221,7 @@ function showUser(){
 			if($t){
 				$res = '"' . $_GET["t"] . '"';
 				$b_i = json_decode(file_get_contents("db/posts/" . $_GET["t"] . ".json"));
-      }
+      }else{$res='false';}
       if(isset($verified)){$utype=$acctype;}else{$utype=0;}
       $key = password_hash($_POST["key"], PASSWORD_DEFAULT);
 			$date = date(DATE_ATOM);
@@ -414,8 +418,6 @@ if(!file_exists("db/posts/index.txt") || (filesize("db/posts/index.txt") == 0)) 
 
   } else {
     // Board page
-
-	echo '   <div style="display:block;margin:0 0 10px 0">' . goHome() . ' <span style="float:right"><span style="margin:0 0 0 10px">[<a href="?reglas">ToS</a>] [' . showUser() . ']</span></span></div>';
 
   $banner = banner();
   echo '<div id="bhome">' . $banner . '<h1>' . $title . '</h1><p>' . $description . '</p><h3>[<a href="?post">New thread</a>]</a></h3></div>';
