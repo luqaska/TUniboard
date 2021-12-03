@@ -1,6 +1,10 @@
 <?php include_once("conf.php"); require_once('Chandown.php'); session_start();
 
 
+$title = '';
+$description = '';
+
+
 /*
 * TithaEngine vBETA2
 * https://github.com/beikvar/TithaEngine
@@ -93,26 +97,6 @@ function notFound() {
   echo '<div style="text-align:center"><img style="text-align:center" src="img/404.png" width="30%"><br><p>Not found</p></div>';
 }
 
-/* Show all board's codes */
-function boardList(){
-	$MessageArray = file_get_contents("db/boards/index.txt");
-  $CurrMsg = explode("\n", $MessageArray);
-
-	// Variable that simply counts the number of items in the $MessageArray
-	$count = count($CurrMsg);
-
-  // Return variable
-  $vaa = "[ ";
-
-	// For every message that array has, we will loop to create a new <div> element and create the content
-	for($i = 0; $i < $count; ++$i) {
-    // Open content
-    $vaa .= "<a href=\"?board=$CurrMsg[$i]\">/$CurrMsg[$i]/</a> ";
-  }
-  $vaa .= "]<span style=\"margin:0 0 0 10px\">[<a href=\"?reglas\">ToS</a>]</span>";
-  return $vaa;
-}
-
 /* User */
 function showUser(){
   if(isset($_SESSION["user"])){
@@ -203,22 +187,11 @@ function showUser(){
 		if(isset($_GET["t"]) && file_exists("db/posts/$_GET[t].json")){
       $testi=json_decode(file_get_contents("db/posts/$_GET[t].json"));
       if($testi->{"res"}==""){
-        $t=true;$b=false;
+        $t=true;
       }else{
-			  $t=false;$b=false;
+			  $t=false;
       }
-		}elseif(isset($_GET["board"]) && file_exists("db/boards/$_GET[board].json")){
-      $testi=json_decode(file_get_contents("db/boards/$_GET[board].json"));
-      if($testi->{"blocked"}==false){
-        $t=false;$b=true;
-      }else{
-        if(isset($verified)){
-			    $t=false;$b=true;
-        }else{
-          $t=false;$b=false;
-        }
-      }
-		}else{$t=false;$b=false;}
+		}else{$t=false;}
 		if(isset($_POST["submit"])) {
 
       // Create ID
@@ -244,20 +217,11 @@ function showUser(){
 			if($t){
 				$res = '"' . $_GET["t"] . '"';
 				$b_i = json_decode(file_get_contents("db/posts/" . $_GET["t"] . ".json"));
-				$board = $b_i->{"board"};
-      }else{
-				$res = 'false';
-				if($b){
-					$board = $_GET["board"];
-				}else{
-					$board = $_POST["board"];
-				}
-        echo $board;
-			}
+      }
       if(isset($verified)){$utype=$acctype;}else{$utype=0;}
       $key = password_hash($_POST["key"], PASSWORD_DEFAULT);
 			$date = date(DATE_ATOM);
-			$MessageRecord = "{\"board\":\"".$board."\",\"res\":$res,\"subject\":\"$Subject\",\"date\":\"$date\",\"name\":$Name,\"utype\":$utype,\"msg\":\"$Message\",\"key\":\"$key\"}";
+			$MessageRecord = "{\"res\":$res,\"subject\":\"$Subject\",\"date\":\"$date\",\"name\":$Name,\"utype\":$utype,\"msg\":\"$Message\",\"key\":\"$key\"}";
 
 			// Create up the file index.txt and save the file data into a variable
 			$DatabaseFile = fopen("db/posts/index.txt", "ab");
@@ -288,29 +252,7 @@ function showUser(){
 
 	<h1> Post New Message </h1>
 	<hr/>
-	<form action="?post<?php if($t){echo '&t=' . $_GET['t'];}elseif($b){echo '&board=' . $_GET['board'];} ?>" method="POST">
-<?php
-if(!$t){
-echo '		<label style="font-weight:bold" for="board">Board: </label>' . "\n";
-if(!$b){
-echo '		<select name="board">' . "\n";
-// Open index of categories
-$Boards = file_get_contents("db/boards/index.txt");
-	$Boards_List = explode("\n", $Boards);
-	$Boards_Count = count($Boards_List);
-	for($i = 0; $i < $Boards_Count; ++$i) {
-    $testi=json_decode(file_get_contents("db/boards/$Boards_List[$i].json"));
-    if($testi->{"blocked"}==false){
-        echo '			<option value="' . $Boards_List[$i] . '">/' . $Boards_List[$i] . '/</option>' . $Boards_List[$i] . "</option>\n";
-    }else{
-      if(isset($verified)){
-			  echo '			<option value="' . $Boards_List[$i] . '">/' . $Boards_List[$i] . '/</option>' . $Boards_List[$i] . "</option>\n";
-      }
-    }
-  }
-echo '		</select> <br />';
-}else{echo "/" . $_GET["board"] . "/ <br /> \n";}
-} ?>
+	<form action="?post<?php if($t){echo '&t=' . $_GET['t'];} ?>" method="POST">
 		<label style="font-weight:bold" for="subject"> Subject: </label>
 		<input type="text" name="subject"/> <br/>
 		<label style="font-weight:bold" for="name"> Name: </label>
@@ -350,7 +292,7 @@ echo '		</select> <br />';
           del($_GET["p"]);
           echo "<h1>Post eliminado</h1>";
           $Content = json_decode(file_get_contents("db/posts/" . $_GET["p"] . ".json"));
-          header("location: ?board=" . $Content->{"board"});
+          header("location: ?");
         }else{
           echo "<h1>Invalid key</h1>";
         }
@@ -359,7 +301,7 @@ echo '		</select> <br />';
           del($_GET["p"]);
           echo "<h1>Post eliminado</h1>";
           $Content = json_decode(file_get_contents("db/posts/" . $_GET["p"] . ".json"));
-          header("location: ?board=" . $Content->{"board"});
+          header("location: ?");
         }
       }else{
         echo "<div style='text-align:center'><h2>Poné tu llave para eliminar tu post</h2><form action='?del&p=$_GET[p]' method='POST'><input type='password' name='key'><input type='submit'></form></div>";
@@ -425,69 +367,6 @@ if(!file_exists("db/posts/index.txt") || (filesize("db/posts/index.txt") == 0)) 
 
 
 
-  } elseif(isset($_GET["board"])) {
-    // Board page
-if(file_exists("db/boards/" . $_GET["board"] . ".json")){
-
-	echo '   <div style="display:block;margin:0 0 10px 0">' . goHome() . ' <span style="float:right"><span style="margin:0 0 0 10px">[<a href="?reglas">ToS</a>] [' . showUser() . ']</span></span></div>';
-
-  $board_info = json_decode(file_get_contents("db/boards/" . $_GET["board"] . ".json"));
-  $banner = banner();
-  echo '<div id="bhome">' . $banner . '<h1> /' . $_GET["board"] . '/ - ' . $board_info->{"title"} . '</h1><p>' . $board_info->{"description"} . '</p><h3>[<a href="?post&board=' . $_GET["board"] . '">New thread</a>]</a></h3></div>';
-  if(!file_exists("db/posts/index.txt") || (filesize("db/posts/index.txt") == 0)) {
-		echo "The are no things posted.</p>\n";
-	} else {
-		$MessageArray = file_get_contents("db/posts/index.txt");
-		echo "<div id=\"list\"> \n ";
-
-    $CurrMsg = explode("\n", $MessageArray);
-
-		// Variable that simply counts the number of items in the $MessageArray
-		$count = count($CurrMsg);
-    $s = $count-1;
-    $num = 0;
-
-		// For every message that array has, we will loop to create a new <div> element and create the content
-		for($i = 0; $i < $count; ++$i) {
-      // Open content (if it exists)
-      if(file_exists("db/posts/" . $CurrMsg[$s] . ".json")){
-      
-      $Content = json_decode(file_get_contents("db/posts/" . $CurrMsg[$s] . ".json"));
-      
-      // Check if it is a post or a reply
-      if(!($Content->{"res"}) && ($Content->{"board"} == $_GET["board"])){
-        // Show post
-			  echo "<div class=\"item\">\n";
-			  if($Content->{"utype"} != 0){
-			    $ubdg = ' <img class="bdg" src="img/';
-          if($Content->{"utype"} == 1){
-            $aus = "Admin";
-          }elseif($Content->{"utype"} == 2){
-            $aus = "Mod";
-          }elseif($Content->{"utype"} == 3){
-            $aus = "Verificado";
-          }
-          $ubdg .= "$aus.png\" title=\"$aus\" alt=\"$aus\">";
-			  }else{$ubdg = "";}
-			  echo "<span class=\"name\">" . $Content->{"name"} . $ubdg . "</span>\n";
-        echo "<span class=\"subject\">" . $Content->{"subject"} . "</span>\n";
-			  echo "<span class=\"date\">" . $Content->{"date"} . "</span>\n";
-			  echo "<div class=\"msg\">" . \Slimdown::render($Content->{"msg"}) . "</div>";
-			  echo "<br><span class=\"subp\">[<a href=\"?board=$_GET[board]&t=$CurrMsg[$s]\">View Thread</a>] [<a href=\"?del&p=$CurrMsg[$s]\">Delete</a>]</span>\n";
-			  echo "</div>\n";
-        $num++;
-      }
-		}
-    $s--;
-    }
-    if($num==0){echo '<h4 style="text-align:center">Este tablón est&aacute; vacío :-(</h4>';}
-		echo"</div>\n";
-	}
-}else{notFound();}
-
-
-
-
   } elseif(isset($_GET["auth"])){
         // Post page
 		if(isset($_POST["submit"])) {
@@ -534,49 +413,66 @@ if(file_exists("db/boards/" . $_GET["board"] . ".json")){
 
 
   } else {
-    echo '<div style="text-align:center">' . "\n" . '<h1><a href="?"><span id="title"><img src="img/logo.png" height="30px" width="auto" alt="<?= $title ?>" title="<?= $title ?>"></span></a></h1>' . "\n" . '<h2><span id="desc">' . $description . '</span></h2>';
-	  if(!file_exists("db/boards/index.txt") || (filesize("db/boards/index.txt") == 0)) {
-		  echo "<p>The are no boards.</p>\n";
-		} else {
-      echo "<div id=\"boards\">\n<h1>Boards</h1>\n";
+    // Board page
 
-			function board_info($b){
+	echo '   <div style="display:block;margin:0 0 10px 0">' . goHome() . ' <span style="float:right"><span style="margin:0 0 0 10px">[<a href="?reglas">ToS</a>] [' . showUser() . ']</span></span></div>';
 
-        // Open
-				$Content = json_decode(file_get_contents("db/boards/" . $b . ".json"));
+  $banner = banner();
+  echo '<div id="bhome">' . $banner . '<h1>' . $title . '</h1><p>' . $description . '</p><h3>[<a href="?post">New thread</a>]</a></h3></div>';
+  if(!file_exists("db/posts/index.txt") || (filesize("db/posts/index.txt") == 0)) {
+		echo "The are no things posted.</p>\n";
+	} else {
+		$MessageArray = file_get_contents("db/posts/index.txt");
+		echo "<div id=\"list\"> \n ";
 
-				// Show
-				echo "<li><a href=\"?board=" . $b . "\">" . $Content->{"name"} . "</a></li>\n";
-    	}
+    $CurrMsg = explode("\n", $MessageArray);
 
-      // Open index of categories
-      $OpenDB_Cats = file_get_contents("db/categories/index.txt");
-      $OpenDB_Cats_List = explode("\n", $OpenDB_Cats);
-      $OpenDB_Cats_Count = count($OpenDB_Cats_List);
-      for($i = 0; $i < $OpenDB_Cats_Count; ++$i) {
+		// Variable that simply counts the number of items in the $MessageArray
+		$count = count($CurrMsg);
+    $s = $count-1;
+    $num = 0;
 
-        echo "<div class=\"cat\">\n<h2>" . $OpenDB_Cats_List[$i] . "</h2>\n<div class=\"catl\">\n";
-
-        // Open a category file
-				$OpenDB_Cats_Bs = json_decode(file_get_contents("db/categories/" . $OpenDB_Cats_List[$i] . ".json"));
-        $OpenDB_Cats_Bs_Count = count($OpenDB_Cats_Bs->{"boards"});
-
-				// Show boards
-        for($ii = 0; $ii < $OpenDB_Cats_Bs_Count; ++$ii) {
-          $OpenDB_Cats_Bs_Content = json_decode(file_get_contents("db/boards/" . $OpenDB_Cats_Bs->{"boards"}[$ii] . ".json"));
-				  echo "<li><a href=\"?board=" . $OpenDB_Cats_Bs->{"boards"}[$ii] . "\">" . $OpenDB_Cats_Bs_Content->{"name"} . "</a></li>\n";
-        }
-
-        echo "</div>\n</div>";
-			}
-      echo "</table>\n</div>\n";
+		// For every message that array has, we will loop to create a new <div> element and create the content
+		for($i = 0; $i < $count; ++$i) {
+      // Open content (if it exists)
+      if(file_exists("db/posts/" . $CurrMsg[$s] . ".json")){
+      
+      $Content = json_decode(file_get_contents("db/posts/" . $CurrMsg[$s] . ".json"));
+      
+      // Check if it is a post or a reply
+      if(!($Content->{"res"})){
+        // Show post
+			  echo "<div class=\"item\">\n";
+			  if($Content->{"utype"} != 0){
+			    $ubdg = ' <img class="bdg" src="img/';
+          if($Content->{"utype"} == 1){
+            $aus = "Admin";
+          }elseif($Content->{"utype"} == 2){
+            $aus = "Mod";
+          }elseif($Content->{"utype"} == 3){
+            $aus = "Verificado";
+          }
+          $ubdg .= "$aus.png\" title=\"$aus\" alt=\"$aus\">";
+			  }else{$ubdg = "";}
+			  echo "<span class=\"name\">" . $Content->{"name"} . $ubdg . "</span>\n";
+        echo "<span class=\"subject\">" . $Content->{"subject"} . "</span>\n";
+			  echo "<span class=\"date\">" . $Content->{"date"} . "</span>\n";
+			  echo "<div class=\"msg\">" . \Slimdown::render($Content->{"msg"}) . "</div>";
+			  echo "<br><span class=\"subp\">[<a href=\"?t=$CurrMsg[$s]\">View Thread</a>] [<a href=\"?del&p=$CurrMsg[$s]\">Delete</a>]</span>\n";
+			  echo "</div>\n";
+        $num++;
+      }
 		}
+    $s--;
+    }
+    if($num==0){echo '<h4 style="text-align:center">Este tablón est&aacute; vacío :-(</h4>';}
+		echo"</div>\n";
+	}
   }
 
 	?>
 <footer>
-&copy;2021 Beikvar - <a href="https://github.com/beikvar/TithaEngine">Code</a ><br />
-Using TithaEngine - v. β2
+Using <a href="https://github.com/beikvar/TithaEngine">TithaEngine</a> + <a href="https://github.com/luqaska/TUniboard">TUniboard</a ><br />
 <!--<br><br>Este sitio web sigue en desarrollo, solo los desarrolladores tienen derecho a públicar contenido aquí.-->
 </footer>
 </body>
